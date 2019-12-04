@@ -16,7 +16,6 @@ from zeroconf import Zeroconf
 
 import kolibri
 from kolibri.core.discovery.models import DynamicNetworkLocation
-from kolibri.core.discovery.utils.network.client import NetworkClient
 from kolibri.core.discovery.utils.network.errors import NetworkLocationNotFound
 from kolibri.utils.conf import KOLIBRI_HOME
 
@@ -148,13 +147,7 @@ class KolibriZeroconfListener(object):
 cache = Cache(os.path.join(KOLIBRI_HOME, "zeroconf_cache"))
 
 
-def gather_instance_data(instance):
-    endpoint_path = "/api/content/channel/?available=true"
-    network_client = NetworkClient(instance.get("base_url"))
-    instance["data"]["channels"] = network_client.get(endpoint_path).json()
-
-
-def find_peer_instances():
+def get_peer_instances():
     """Retrieve a list of dicts with information about the discovered Kolibri instances on the local network,
     filtering out those that can't be accessed at the specified port (via attempting to open a socket)."""
     if not ZEROCONF_STATE["listener"]:
@@ -164,18 +157,18 @@ def find_peer_instances():
     return list(ZEROCONF_STATE["listener"].instances.values())
 
 
-def get_available_instances(timeout=2, include_local=True):
+def run_peer_discovery(timeout=2, include_local=True):
     """Find peer Kolibri instances, check their availability then add them to the database.
-    Returns either a `DynamicNetworkLocation` queryset or a list of DynamicNetworkLocation objects."""
+    Returns `True` if a fresh scan happened, otherwise returns `False`."""
 
     discoveries_are_fresh = cache.get(ZEROCONF_DISCOVERIES_ARE_FRESH)
 
     if discoveries_are_fresh:
         # a queryset pointing at already discovered addresses
-        return DynamicNetworkLocation.objects
+        return False
     else:
 
-        for instance in find_peer_instances():
+        for instance in get_peer_instances():
             if instance["local"] and not include_local:
                 continue
 
@@ -197,7 +190,7 @@ def get_available_instances(timeout=2, include_local=True):
                 )
 
         cache.set(ZEROCONF_DISCOVERIES_ARE_FRESH, True, ZEROCONF_MIN_ALLOWED_REFRESH)
-        return DynamicNetworkLocation.objects
+        return True
 
 
 def register_zeroconf_service(port, id):

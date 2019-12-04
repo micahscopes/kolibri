@@ -286,7 +286,7 @@ REST_FRAMEWORK = {
 }
 
 # System warnings to disable
-# see https://Kdocs.djangoproject.com/en/1.9/ref/settings/#silenced-system-checks
+# see https://docs.djangoproject.com/en/1.9/ref/settings/#silenced-system-checks
 SILENCED_SYSTEM_CHECKS = ["auth.W004"]
 
 # Configuration for Django JS Reverse

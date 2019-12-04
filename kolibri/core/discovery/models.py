@@ -79,11 +79,6 @@ class DynamicNetworkLocationManager(models.Manager):
     def purge(self):
         self.get_queryset().delete()
 
-    def purge_unavailable(self):
-        for location in self.get_queryset():
-            if not location.available:
-                location.delete()
-
 
 class DynamicNetworkLocation(NetworkLocation):
     objects = DynamicNetworkLocationManager()

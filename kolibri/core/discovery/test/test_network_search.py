@@ -8,7 +8,7 @@ from zeroconf import ServiceInfo
 from zeroconf import Zeroconf
 
 from ..utils.network.search import _id_from_name
-from ..utils.network.search import find_peer_instances
+from ..utils.network.search import get_peer_instances
 from ..utils.network.search import initialize_zeroconf_listener
 from ..utils.network.search import KolibriZeroconfService
 from ..utils.network.search import LOCAL_DOMAIN
@@ -105,10 +105,10 @@ class TestNetworkSearch(TransactionTestCase):
         assert ZEROCONF_STATE["listener"] is not None
 
     def test_register_zeroconf_service(self):
-        assert len(find_peer_instances()) == 0
+        assert len(get_peer_instances()) == 0
         initialize_zeroconf_listener()
         register_zeroconf_service(MOCK_PORT, MOCK_ID)
-        assert find_peer_instances() == [
+        assert get_peer_instances() == [
             {
                 "id": MOCK_ID,
                 "ip": MOCK_INTERFACE_IP,
@@ -124,16 +124,16 @@ class TestNetworkSearch(TransactionTestCase):
         ]
         register_zeroconf_service(MOCK_PORT, MOCK_ID)
         unregister_zeroconf_service()
-        assert len(find_peer_instances()) == 0
+        assert len(get_peer_instances()) == 0
 
     def test_naming_conflict(self):
         assert not ZEROCONF_STATE["listener"]
         service1 = KolibriZeroconfService(id=MOCK_ID, port=MOCK_PORT)
         service1.register()
-        assert len(find_peer_instances()) == 1
+        assert len(get_peer_instances()) == 1
         service2 = KolibriZeroconfService(id=MOCK_ID, port=MOCK_PORT)
         service2.register()
-        assert len(find_peer_instances()) == 2
+        assert len(get_peer_instances()) == 2
         assert service1.id + "-2" == service2.id
         service1.unregister()
         service2.unregister()
