@@ -7,6 +7,7 @@ import time
 from contextlib import closing
 
 from diskcache import Cache
+from django.conf import settings
 from zeroconf import get_all_addresses
 from zeroconf import NonUniqueNameException
 from zeroconf import ServiceInfo
@@ -14,10 +15,10 @@ from zeroconf import USE_IP_OF_OUTGOING_INTERFACE
 from zeroconf import Zeroconf
 
 import kolibri
+from kolibri.core.discovery.models import DynamicNetworkLocation
 from kolibri.core.discovery.utils.network.client import NetworkClient
 from kolibri.core.discovery.utils.network.errors import NetworkLocationNotFound
 from kolibri.utils.conf import KOLIBRI_HOME
-
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,11 @@ LOCAL_DOMAIN = "kolibri.local"
 
 ZEROCONF_STATE = {"zeroconf": None, "listener": None, "service": None}
 
+ZEROCONF_MIN_ALLOWED_REFRESH = getattr(settings, 'ZEROCONF_MIN_ALLOWED_REFRESH')
+
 # ZeroConf cache keys
 ZEROCONF_SERVICE_ID = "ZEROCONF_SERVICE_ID"
-ZEROCONF_AVAILABLE_INSTANCES = "ZEROCONF_AVAILABLE_INSTANCES"
+ZEROCONF_DISCOVERIES_ARE_FRESH = "ZEROCONF_DISCOVERIES_ARE_FRESH"
 
 
 def _id_from_name(name):
@@ -151,44 +154,64 @@ def gather_instance_data(instance):
     instance['data']['channels'] = network_client.get(endpoint_path).json()
 
 
-def get_available_instances(timeout=2, include_local=True):
+def find_peer_instances():
     """Retrieve a list of dicts with information about the discovered Kolibri instances on the local network,
     filtering out those that can't be accessed at the specified port (via attempting to open a socket)."""
-
     if not ZEROCONF_STATE["listener"]:
         initialize_zeroconf_listener()
         time.sleep(3)
 
-    cached_instances = cache.get(ZEROCONF_AVAILABLE_INSTANCES)
+    return list(ZEROCONF_STATE["listener"].instances.values())
 
-    if cached_instances:
-        return cached_instances
+
+def get_available_instances(timeout=2, include_local=True):
+    """Find peer Kolibri instances, check their availability then add them to the database.
+    Returns either a `DynamicNetworkLocation` queryset or a list of DynamicNetworkLocation objects."""
+
+    discoveries_are_fresh = cache.get(ZEROCONF_DISCOVERIES_ARE_FRESH)
+
+    if discoveries_are_fresh:
+        # a queryset pointing at already discovered addresses
+        return DynamicNetworkLocation.objects
     else:
         instances = []
-        for instance in ZEROCONF_STATE["listener"].instances.values():
+
+        for instance in find_peer_instances():
             if instance["local"] and not include_local:
                 continue
 
-            try:
-                if not instance["self"]:
-                    gather_instance_data(instance)
+            if instance["self"]:
+                continue
 
-                instances.append(instance)
+            try:
+                network_location, created = \
+                    DynamicNetworkLocation.objects.update_or_create(
+                        dict(base_url=instance.get("base_url")),
+                        id=instance.get("data").get("instance_id"),
+                    )
+
+                if network_location.available:
+                    instances.append(network_location)
 
             except NetworkLocationNotFound:
                 logger.info("The device with id %s could no longer be reached" % instance["id"])
 
-        cache.set(ZEROCONF_AVAILABLE_INSTANCES, instances, 20)
+        cache.set(ZEROCONF_DISCOVERIES_ARE_FRESH, True, ZEROCONF_MIN_ALLOWED_REFRESH)
         return instances
 
 
 def register_zeroconf_service(port, id):
-    cache.set(ZEROCONF_SERVICE_ID, id)
+    short_id = id[:4]
+    DynamicNetworkLocation.objects.purge()  # cleanup old dynamic network locations
+    cache.set(ZEROCONF_SERVICE_ID, short_id)
     if ZEROCONF_STATE["service"] is not None:
         unregister_zeroconf_service()
-    logger.info("Registering ourselves to zeroconf network with id '%s'..." % id)
-    data = {"version": kolibri.VERSION}
-    ZEROCONF_STATE["service"] = KolibriZeroconfService(id=id, port=port, data=data)
+    logger.info("Registering ourselves to zeroconf network with id '%s'..." % short_id)
+    data = {
+        "version": kolibri.VERSION,
+        "instance_id": id,
+    }
+    ZEROCONF_STATE["service"] = KolibriZeroconfService(id=short_id, port=port, data=data)
     ZEROCONF_STATE["service"].register()
 
 
@@ -198,6 +221,7 @@ def unregister_zeroconf_service():
     ZEROCONF_STATE["service"] = None
 
     cache.set(ZEROCONF_SERVICE_ID, None)
+    cache.set(ZEROCONF_DISCOVERIES_ARE_FRESH, False)
 
 
 def initialize_zeroconf_listener():
