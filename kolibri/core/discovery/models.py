@@ -1,8 +1,6 @@
 import uuid
-from datetime import timedelta
 
 from django.db import models
-from django.utils import timezone
 
 from .utils.network.client import NetworkClient
 from .utils.network.errors import NetworkClientError
@@ -51,6 +49,8 @@ class NetworkLocation(models.Model):
             self.save()
             return True
         except NetworkClientError:
+            if self.dynamic:
+                self.delete()
             return False
 
 
@@ -79,9 +79,10 @@ class DynamicNetworkLocationManager(models.Manager):
     def purge(self):
         self.get_queryset().delete()
 
-    def cleanup_old_entries(self):
-        past_day = timezone.now().date() - timedelta(days=1)
-        self.get_queryset().filter(added__lte=past_day).delete()
+    def purge_unavailable(self):
+        for location in self.get_queryset():
+            if not location.available:
+                location.delete()
 
 
 class DynamicNetworkLocation(NetworkLocation):

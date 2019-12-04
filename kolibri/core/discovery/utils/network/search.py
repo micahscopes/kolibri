@@ -174,7 +174,6 @@ def get_available_instances(timeout=2, include_local=True):
         # a queryset pointing at already discovered addresses
         return DynamicNetworkLocation.objects
     else:
-        instances = []
 
         for instance in find_peer_instances():
             if instance["local"] and not include_local:
@@ -192,16 +191,13 @@ def get_available_instances(timeout=2, include_local=True):
                     id=instance.get("data").get("instance_id"),
                 )
 
-                if network_location.available:
-                    instances.append(network_location)
-
             except NetworkLocationNotFound:
                 logger.info(
                     "The device with id %s could no longer be reached" % instance["id"]
                 )
 
         cache.set(ZEROCONF_DISCOVERIES_ARE_FRESH, True, ZEROCONF_MIN_ALLOWED_REFRESH)
-        return instances
+        return DynamicNetworkLocation.objects
 
 
 def register_zeroconf_service(port, id):
