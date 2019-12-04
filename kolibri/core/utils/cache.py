@@ -33,10 +33,6 @@ class CrossProcessCache(object):
     def set(self, key, value, timeout=NOTHING, version=None):
         if timeout == NOTHING:
             timeout = self.default_timeout
-        caches["default"].set(
-            key, value, timeout=timeout, version=version
-        )
+        caches["default"].set(key, value, timeout=timeout, version=version)
         if cache_options["CACHE_BACKEND"] != "redis":
-            caches["process_cache"].set(
-                key, value, timeout=timeout, version=version
-            )
+            caches["process_cache"].set(key, value, timeout=timeout, version=version)

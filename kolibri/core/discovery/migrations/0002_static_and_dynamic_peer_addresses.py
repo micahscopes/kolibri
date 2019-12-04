@@ -10,50 +10,51 @@ from django.db import models
 
 class Migration(migrations.Migration):
 
-    replaces = [('discovery', '0002_auto_20191203_1952'), ('discovery', '0003_auto_20191203_2117'), ('discovery', '0004_auto_20191203_2140')]
+    replaces = [
+        ("discovery", "0002_auto_20191203_1952"),
+        ("discovery", "0003_auto_20191203_2117"),
+        ("discovery", "0004_auto_20191203_2140"),
+    ]
 
     dependencies = [
-        ('discovery', '0001_initial'),
+        ("discovery", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DynamicNetworkLocation',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-                'indexes': [],
-            },
-            bases=('discovery.networklocation',),
+            name="DynamicNetworkLocation",
+            fields=[],
+            options={"proxy": True, "indexes": [],},
+            bases=("discovery.networklocation",),
         ),
         migrations.CreateModel(
-            name='StaticNetworkLocation',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-                'indexes': [],
-            },
-            bases=('discovery.networklocation',),
+            name="StaticNetworkLocation",
+            fields=[],
+            options={"proxy": True, "indexes": [],},
+            bases=("discovery.networklocation",),
         ),
         migrations.AddField(
-            model_name='networklocation',
-            name='dynamic',
+            model_name="networklocation",
+            name="dynamic",
             field=models.BooleanField(default=False),
         ),
         migrations.AlterModelOptions(
-            name='networklocation',
-            options={'ordering': ['added']},
+            name="networklocation", options={"ordering": ["added"]},
         ),
         migrations.AlterField(
-            model_name='networklocation',
-            name='id',
-            field=models.CharField(default=uuid.uuid4, editable=False, max_length=36, primary_key=True, serialize=False),
+            model_name="networklocation",
+            name="id",
+            field=models.CharField(
+                default=uuid.uuid4,
+                editable=False,
+                max_length=36,
+                primary_key=True,
+                serialize=False,
+            ),
         ),
         migrations.AlterField(
-            model_name='networklocation',
-            name='added',
+            model_name="networklocation",
+            name="added",
             field=models.DateTimeField(auto_now_add=True, db_index=True),
         ),
     ]

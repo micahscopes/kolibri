@@ -27,7 +27,7 @@ LOCAL_DOMAIN = "kolibri.local"
 
 ZEROCONF_STATE = {"zeroconf": None, "listener": None, "service": None}
 
-ZEROCONF_MIN_ALLOWED_REFRESH = getattr(settings, 'ZEROCONF_MIN_ALLOWED_REFRESH')
+ZEROCONF_MIN_ALLOWED_REFRESH = getattr(settings, "ZEROCONF_MIN_ALLOWED_REFRESH")
 
 # ZeroConf cache keys
 ZEROCONF_SERVICE_ID = "ZEROCONF_SERVICE_ID"
@@ -149,9 +149,9 @@ cache = Cache(os.path.join(KOLIBRI_HOME, "zeroconf_cache"))
 
 
 def gather_instance_data(instance):
-    endpoint_path = '/api/content/channel/?available=true'
-    network_client = NetworkClient(instance.get('base_url'))
-    instance['data']['channels'] = network_client.get(endpoint_path).json()
+    endpoint_path = "/api/content/channel/?available=true"
+    network_client = NetworkClient(instance.get("base_url"))
+    instance["data"]["channels"] = network_client.get(endpoint_path).json()
 
 
 def find_peer_instances():
@@ -184,17 +184,21 @@ def get_available_instances(timeout=2, include_local=True):
                 continue
 
             try:
-                network_location, created = \
-                    DynamicNetworkLocation.objects.update_or_create(
-                        dict(base_url=instance.get("base_url")),
-                        id=instance.get("data").get("instance_id"),
-                    )
+                (
+                    network_location,
+                    created,
+                ) = DynamicNetworkLocation.objects.update_or_create(
+                    dict(base_url=instance.get("base_url")),
+                    id=instance.get("data").get("instance_id"),
+                )
 
                 if network_location.available:
                     instances.append(network_location)
 
             except NetworkLocationNotFound:
-                logger.info("The device with id %s could no longer be reached" % instance["id"])
+                logger.info(
+                    "The device with id %s could no longer be reached" % instance["id"]
+                )
 
         cache.set(ZEROCONF_DISCOVERIES_ARE_FRESH, True, ZEROCONF_MIN_ALLOWED_REFRESH)
         return instances
@@ -211,7 +215,9 @@ def register_zeroconf_service(port, id):
         "version": kolibri.VERSION,
         "instance_id": id,
     }
-    ZEROCONF_STATE["service"] = KolibriZeroconfService(id=short_id, port=port, data=data)
+    ZEROCONF_STATE["service"] = KolibriZeroconfService(
+        id=short_id, port=port, data=data
+    )
     ZEROCONF_STATE["service"].register()
 
 

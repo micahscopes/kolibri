@@ -15,11 +15,13 @@ class NetworkLocation(models.Model):
     """
 
     class Meta:
-        ordering = ['added']
+        ordering = ["added"]
 
     # for statically added network locations: `id` will be a random UUID
     # for dynamically discovered devices: `id` will be the device's `instance_id`
-    id = models.CharField(primary_key=True, max_length=36, default=uuid.uuid4, editable=False)
+    id = models.CharField(
+        primary_key=True, max_length=36, default=uuid.uuid4, editable=False
+    )
     base_url = models.CharField(max_length=100)
 
     application = models.CharField(max_length=32, blank=True)
