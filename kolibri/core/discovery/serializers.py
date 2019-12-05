@@ -16,7 +16,8 @@ class NetworkLocationSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "available",
-            "nickname" "base_url",
+            "nickname",
+            "base_url",
             "device_name",
             "instance_id",
             "added",

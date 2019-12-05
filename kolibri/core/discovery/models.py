@@ -1,16 +1,10 @@
-import uuid
 from datetime import timedelta
 
 from dateutil.relativedelta import relativedelta
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 from .utils.network.client import ping
-
-
-class NetworkLocationManager(models.Manager):
-    pass
 
 
 class NetworkLocation(models.Model):
@@ -19,21 +13,9 @@ class NetworkLocation(models.Model):
     which can be used to sync content or data.
     """
 
-    objects = NetworkLocationManager()
-
     EXPIRATION_WINDOW = timedelta(seconds=10)
     DEFAULT_PING_TIMEOUT_SECONDS = 5
     NEVER = timezone.now() - relativedelta(years=1000)
-
-    class Meta:
-        ordering = ["added"]
-
-    # for statically added network locations: `id` will be a random UUID
-    # for dynamically discovered devices: `id` will be the device's `instance_id`
-    id = models.CharField(
-        primary_key=True, max_length=36, default=uuid.uuid4, editable=False
-    )
-    dynamic = models.BooleanField(default=False)
 
     base_url = models.CharField(max_length=100)
     nickname = models.CharField(max_length=100, blank=True)
@@ -46,7 +28,7 @@ class NetworkLocation(models.Model):
     operating_system = models.CharField(max_length=32, blank=True)
 
     # dates and times
-    added = models.DateTimeField(auto_now_add=True, db_index=True)
+    added = models.DateTimeField(auto_now_add=True)
     last_accessed = models.DateTimeField(auto_now=True)
     last_available = models.DateTimeField(default=NEVER)
     last_unavailable = models.DateTimeField(default=NEVER)
@@ -84,61 +66,3 @@ class NetworkLocation(models.Model):
             return False
         else:
             return True if self.ping() else False
-
-
-class StaticNetworkLocationManager(NetworkLocationManager):
-    def get_queryset(self):
-        queryset = super(StaticNetworkLocationManager, self).get_queryset()
-        return queryset.filter(dynamic=False)
-
-
-class StaticNetworkLocation(NetworkLocation):
-    objects = StaticNetworkLocationManager()
-
-    class Meta:
-        proxy = True
-
-    def save(self, *args, **kwargs):
-        self.dynamic = False
-        return super(StaticNetworkLocation, self).save(*args, **kwargs)
-
-
-class DynamicNetworkLocationManager(NetworkLocationManager):
-    def get_queryset(self):
-        queryset = super(DynamicNetworkLocationManager, self).get_queryset()
-        return queryset.filter(dynamic=True)
-
-    def purge(self):
-        self.get_queryset().delete()
-
-    def log_location(self, base_url, **kwargs):
-        info = ping(base_url)
-        if info:
-            instance_id = info.get("instance_id")
-            info.update(last_available=timezone.now(), base_url=base_url)
-            location, created = self.update_or_create(info, id=instance_id)
-            return location
-
-
-class DynamicNetworkLocation(NetworkLocation):
-    objects = DynamicNetworkLocationManager()
-
-    class Meta:
-        proxy = True
-
-    def save(self, *args, **kwargs):
-        self.dynamic = True
-
-        if self.id and self.instance_id and self.id != self.instance_id:
-            raise ValidationError(
-                {"instance_id": "`instance_id` and `id` must be the same"}
-            )
-
-        if self.instance_id:
-            return super(DynamicNetworkLocation, self).save(*args, **kwargs)
-        else:
-            raise ValidationError(
-                {
-                    "instance_id": "DynamicNetworkLocations must be be created with an instance ID!"
-                }
-            )
