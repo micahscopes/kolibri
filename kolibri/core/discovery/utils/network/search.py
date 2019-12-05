@@ -34,6 +34,14 @@ discovery_index = Index(os.path.join(KOLIBRI_HOME, "zeroconf", "index"),)
 meta_cache = Cache(os.path.join(KOLIBRI_HOME, "zeroconf", "meta"),)
 
 
+def get_peer_instances():
+    return discovery_index.values()
+
+
+def get_peer_instance(instance_id):
+    return discovery_index[instance_id]
+
+
 def _id_from_name(name):
     assert name.endswith(SERVICE_TYPE), (
         "Invalid service name; must end with '%s'" % SERVICE_TYPE
@@ -170,7 +178,6 @@ class KolibriZeroconfListener(object):
 
 
 def register_zeroconf_service(port, device_info):
-    # short_id = device_info.get("instance_id")[:4]
     id = device_info.get("instance_id")
 
     meta_cache.set(ZEROCONF_SERVICE_ID, id)

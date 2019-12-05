@@ -4,15 +4,16 @@ from rest_framework.response import Response
 from .models import NetworkLocation
 from .serializers import NetworkLocationSerializer
 from .utils.network.search import discovery_index
+from .utils.network.search import get_peer_instance
+from .utils.network.search import get_peer_instances
 
 
 class DynamicNetworkLocationViewSet(viewsets.ViewSet):
     def list(self, request):
-        locations = discovery_index.values()
-        return Response(locations)
+        return Response(get_peer_instances())
 
     def retrieve(self, request, pk=None):
-        return Response(discovery_index[pk])
+        return Response(get_peer_instance(pk))
 
 
 class StaticNetworkLocationViewSet(viewsets.ModelViewSet):
@@ -23,6 +24,7 @@ class StaticNetworkLocationViewSet(viewsets.ModelViewSet):
 class NetworkLocationViewSet(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         if pk in discovery_index:
-            return Response(discovery_index[pk])
+            return Response(get_peer_instance(pk))
         else:
-            return StaticNetworkLocationViewSet().retrieve(request, pk)
+            view = StaticNetworkLocationViewSet.as_view({"get": "retrieve"})
+            return view(request._request, pk=pk)
