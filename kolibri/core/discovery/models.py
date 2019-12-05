@@ -1,9 +1,11 @@
 import uuid
+from datetime import timedelta
 
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
-from .utils.network.client import NetworkClient
-from .utils.network.errors import NetworkClientError
+from .utils.network.client import ping
 
 
 class NetworkLocation(models.Model):
@@ -11,6 +13,9 @@ class NetworkLocation(models.Model):
     ``NetworkLocation`` stores information about a network address through which an instance of Kolibri can be accessed,
     which can be used to sync content or data.
     """
+
+    EXPIRATION_TIMEDELTA = timedelta(seconds=10)
+    DEFAULT_PING_TIMEOUT_SECONDS = 5
 
     class Meta:
         ordering = ["added"]
@@ -30,28 +35,42 @@ class NetworkLocation(models.Model):
 
     added = models.DateTimeField(auto_now_add=True, db_index=True)
     last_accessed = models.DateTimeField(auto_now=True)
+    last_available = models.DateTimeField(null=True)
+    last_unavailable = models.DateTimeField(null=True)
 
     dynamic = models.BooleanField(default=False)
 
+    def ping(self):
+        info = ping(self.base_url, timeout=self.DEFAULT_PING_TIMEOUT_SECONDS)
+        now = timezone.now()
+        if info:
+            self.update(last_available=now, **info)
+            return info
+        else:
+            self.update(last_unavilable=now)
+            return None
+
     @property
     def available(self):
-        try:
-            info = NetworkClient(base_url=self.base_url).info
-            self.application = info.get("application", self.application) or ""
-            self.kolibri_version = (
-                info.get("kolibri_version", self.kolibri_version) or ""
-            )
-            self.device_name = self.device_name or info.get("device_name") or ""
-            self.instance_id = info.get("instance_id", self.instance_id) or ""
-            self.operating_system = (
-                info.get("operating_system", self.operating_system) or ""
-            )
-            self.save()
+        """
+        If this connection was checked recently, report that result,
+        otherwise do a fresh check.
+        """
+        expiration_time = timezone.now() - self.EXPIRATION_TIMEDELTA
+
+        available_recently = self.last_available > expiration_time
+        unavailable_recently = self.last_unavailable > expiration_time
+
+        is_available = (
+            available_recently and self.last_available > self.last_unavailable
+        )
+
+        if is_available:
             return True
-        except NetworkClientError:
-            if self.dynamic:
-                self.delete()
+        elif unavailable_recently:
             return False
+        else:
+            return True if self.ping() else False
 
 
 class StaticNetworkLocationManager(models.Manager):
@@ -79,6 +98,14 @@ class DynamicNetworkLocationManager(models.Manager):
     def purge(self):
         self.get_queryset().delete()
 
+    def log_location(self, base_url, **kwargs):
+        info = ping(base_url)
+        if info:
+            instance_id = info.get("instance_id")
+            info.update(last_available=timezone.now())
+            location, created = self.update_or_create(info, id=instance_id)
+            return location
+
 
 class DynamicNetworkLocation(NetworkLocation):
     objects = DynamicNetworkLocationManager()
@@ -88,4 +115,17 @@ class DynamicNetworkLocation(NetworkLocation):
 
     def save(self, *args, **kwargs):
         self.dynamic = True
-        return super(DynamicNetworkLocation, self).save(*args, **kwargs)
+
+        if self.id and self.instance_id and self.id != self.instance_id:
+            raise ValidationError(
+                {"instance_id": "`instance_id` and `id` must be the same"}
+            )
+
+        if self.instance_id:
+            return super(DynamicNetworkLocation, self).save(*args, **kwargs)
+        else:
+            raise ValidationError(
+                {
+                    "instance_id": "DynamicNetworkLocations must be be created with an instance ID!"
+                }
+            )

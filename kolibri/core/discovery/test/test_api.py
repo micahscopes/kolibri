@@ -118,3 +118,24 @@ class NetworkLocationAPITestCase(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_network_location_availability(self):
+        from django.utils import timezone
+        from datetime import timedelta
+
+        a_long_time_ago = timezone.now() - timedelta(minutes=1)
+        recently = timezone.now()
+
+        fresh = models.NetworkLocation.objects.create(
+            base_url="dat://blablabla",
+            last_available=recently,
+            last_unavailable=a_long_time_ago,
+        )
+        self.assertTrue(fresh.available)
+
+        old = models.NetworkLocation.objects.create(
+            base_url="dat://blablabla",
+            last_unavailable=recently,
+            last_available=a_long_time_ago,
+        )
+        self.assertFalse(old.available)

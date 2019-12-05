@@ -16,7 +16,6 @@ from zeroconf import Zeroconf
 
 import kolibri
 from kolibri.core.discovery.models import DynamicNetworkLocation
-from kolibri.core.discovery.utils.network.errors import NetworkLocationNotFound
 from kolibri.utils.conf import KOLIBRI_HOME
 
 logger = logging.getLogger(__name__)
@@ -167,7 +166,6 @@ def run_peer_discovery(timeout=2, include_local=True):
         # a queryset pointing at already discovered addresses
         return False
     else:
-
         for instance in get_peer_instances():
             if instance["local"] and not include_local:
                 continue
@@ -175,19 +173,9 @@ def run_peer_discovery(timeout=2, include_local=True):
             if instance["self"]:
                 continue
 
-            try:
-                (
-                    network_location,
-                    created,
-                ) = DynamicNetworkLocation.objects.update_or_create(
-                    dict(base_url=instance.get("base_url")),
-                    id=instance.get("data").get("instance_id"),
-                )
-
-            except NetworkLocationNotFound:
-                logger.info(
-                    "The device with id %s could no longer be reached" % instance["id"]
-                )
+            DynamicNetworkLocation.objects.log_location(
+                instance.get("base_url")
+            )
 
         cache.set(ZEROCONF_DISCOVERIES_ARE_FRESH, True, ZEROCONF_MIN_ALLOWED_REFRESH)
         return True
