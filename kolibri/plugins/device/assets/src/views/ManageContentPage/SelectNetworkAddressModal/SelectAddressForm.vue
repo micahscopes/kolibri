@@ -73,7 +73,10 @@
       <KFixedGridItem span="1">
         <transition name="fade">
           <div v-if="discoveringPeers" class="searching-indicator">
-            <KCircularLoader :size="16" :stroke="9" />{{ $tr('searchingText') }}
+            <KLabeledIcon>
+              <KCircularLoader slot="icon" :size="16" :stroke="6" />
+              {{ $tr('searchingText') }}
+            </KLabeledIcon>
           </div>
         </transition>
       </KFixedGridItem>
