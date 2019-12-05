@@ -326,13 +326,12 @@
   }
 
   .fade-leave-active {
-    transition: opacity 0.3s;
     transition-delay: 2s;
   }
 
   .fade-enter,
   .fade-leave-to {
-    opacity: 0;
+    opacity: 1;
   }
 
   .ui-progress-circular {
