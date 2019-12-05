@@ -15,4 +15,4 @@ Feature: Successful auto-discovery of new address
   	 When I open the 'select network address' modal and wait a few seconds
   	 Then I should see a loading spinner accompanied with the word 'searching...'
   	   And I should see a list of found local Kolibri peers below all the manually entered network addresses
-       And each peer should display their IP address and peer ID
+       And each peer should display their IP address, port and peer ID
