@@ -1,7 +1,7 @@
 import socket
 
 import mock
-from django.test import TransactionTestCase
+from django.test import TestCase
 from zeroconf import BadTypeInNameException
 from zeroconf import service_type_name
 from zeroconf import ServiceInfo
@@ -98,7 +98,7 @@ class MockZeroconf(Zeroconf):
     "kolibri.core.discovery.utils.network.search.get_all_addresses",
     lambda: [MOCK_INTERFACE_IP],
 )
-class TestNetworkSearch(TransactionTestCase):
+class TestNetworkSearch(TestCase):
     def test_initialize_zeroconf_listener(self):
         assert ZEROCONF_STATE["listener"] is None
         initialize_zeroconf_listener()
