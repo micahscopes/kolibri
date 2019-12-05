@@ -1,6 +1,6 @@
+from datetime import datetime
 from datetime import timedelta
 
-from dateutil.relativedelta import relativedelta
 from django.db import models
 from django.utils import timezone
 
@@ -15,7 +15,7 @@ class NetworkLocation(models.Model):
 
     EXPIRATION_WINDOW = timedelta(seconds=10)
     DEFAULT_PING_TIMEOUT_SECONDS = 5
-    NEVER = timezone.now() - relativedelta(years=1000)
+    NEVER = datetime(1000, 4, 1, 0, 0, 0, 0)
 
     base_url = models.CharField(max_length=100)
     nickname = models.CharField(max_length=100, blank=True)
