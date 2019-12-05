@@ -9,7 +9,7 @@
     @submit="handleSubmit"
     @cancel="$emit('cancel')"
   >
-    <template v-slot>
+    <template>
       <UiAlert
         v-if="uiAlertProps"
         v-show="showUiAlerts"
