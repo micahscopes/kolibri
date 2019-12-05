@@ -7,7 +7,6 @@ from contextlib import closing
 
 from diskcache import Cache
 from diskcache import Index
-from django.conf import settings
 from zeroconf import get_all_addresses
 from zeroconf import NonUniqueNameException
 from zeroconf import ServiceInfo
@@ -22,8 +21,6 @@ SERVICE_TYPE = "Kolibri._sub._http._tcp.local."
 LOCAL_DOMAIN = "kolibri.local"
 
 ZEROCONF_STATE = {"zeroconf": None, "listener": None, "service": None}
-
-ZEROCONF_MIN_ALLOWED_REFRESH = getattr(settings, "ZEROCONF_MIN_ALLOWED_REFRESH")
 
 # ZeroConf cache stuff
 ZEROCONF_SERVICE_ID = "ZEROCONF_SERVICE_ID"
