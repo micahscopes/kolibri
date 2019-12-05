@@ -12,21 +12,20 @@ from kolibri.core.discovery.utils.network.search import run_peer_discovery
 class NetworkLocationViewSet(viewsets.ModelViewSet):
     permission_classes = (CanManageContent,)
     serializer_class = NetworkLocationSerializer
-    queryset = NetworkLocation.objects
-
-
-class DynamicNetworkLocationViewSet(viewsets.ModelViewSet):
-    permission_classes = (CanManageContent,)
-    serializer_class = NetworkLocationSerializer
-    queryset = DynamicNetworkLocation.objects
+    queryset = NetworkLocation.objects.all()
 
     def list(self, request):
-        run_peer_discovery()
         serializer = self.serializer_class(self.queryset, many=True)
         return Response(serializer.data)
 
 
-class StaticNetworkLocationViewSet(viewsets.ModelViewSet):
-    permission_classes = (CanManageContent,)
-    serializer_class = NetworkLocationSerializer
-    queryset = StaticNetworkLocation.objects
+class DynamicNetworkLocationViewSet(NetworkLocationViewSet):
+    queryset = DynamicNetworkLocation.objects.all()
+
+    def list(self, request):
+        run_peer_discovery()
+        return super(DynamicNetworkLocationViewSet, self).list(request)
+
+
+class StaticNetworkLocationViewSet(NetworkLocationViewSet):
+    queryset = StaticNetworkLocation.objects.all()

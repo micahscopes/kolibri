@@ -173,9 +173,7 @@ def run_peer_discovery(timeout=2, include_local=True):
             if instance["self"]:
                 continue
 
-            DynamicNetworkLocation.objects.log_location(
-                instance.get("base_url")
-            )
+            DynamicNetworkLocation.objects.log_location(instance.get("base_url"))
 
         cache.set(ZEROCONF_DISCOVERIES_ARE_FRESH, True, ZEROCONF_MIN_ALLOWED_REFRESH)
         return True

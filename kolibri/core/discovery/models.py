@@ -1,11 +1,16 @@
 import uuid
 from datetime import timedelta
 
+from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 from .utils.network.client import ping
+
+
+class NetworkLocationManager(models.Manager):
+    pass
 
 
 class NetworkLocation(models.Model):
@@ -14,8 +19,11 @@ class NetworkLocation(models.Model):
     which can be used to sync content or data.
     """
 
-    EXPIRATION_TIMEDELTA = timedelta(seconds=10)
+    objects = NetworkLocationManager()
+
+    EXPIRATION_WINDOW = timedelta(seconds=10)
     DEFAULT_PING_TIMEOUT_SECONDS = 5
+    NEVER = timezone.now() - relativedelta(years=1000)
 
     class Meta:
         ordering = ["added"]
@@ -25,29 +33,34 @@ class NetworkLocation(models.Model):
     id = models.CharField(
         primary_key=True, max_length=36, default=uuid.uuid4, editable=False
     )
-    base_url = models.CharField(max_length=100)
+    dynamic = models.BooleanField(default=False)
 
+    base_url = models.CharField(max_length=100)
+    nickname = models.CharField(max_length=100, blank=True)
+
+    # these properties strictly mirror the info given by the device
     application = models.CharField(max_length=32, blank=True)
     kolibri_version = models.CharField(max_length=100, blank=True)
     instance_id = models.CharField(max_length=32, blank=True)
     device_name = models.CharField(max_length=100, blank=True)
     operating_system = models.CharField(max_length=32, blank=True)
 
+    # dates and times
     added = models.DateTimeField(auto_now_add=True, db_index=True)
     last_accessed = models.DateTimeField(auto_now=True)
-    last_available = models.DateTimeField(null=True)
-    last_unavailable = models.DateTimeField(null=True)
-
-    dynamic = models.BooleanField(default=False)
+    last_available = models.DateTimeField(default=NEVER)
+    last_unavailable = models.DateTimeField(default=NEVER)
 
     def ping(self):
         info = ping(self.base_url, timeout=self.DEFAULT_PING_TIMEOUT_SECONDS)
         now = timezone.now()
         if info:
-            self.update(last_available=now, **info)
+            NetworkLocation.objects.filter(id=self.id).update(
+                last_available=now, **info
+            )
             return info
         else:
-            self.update(last_unavilable=now)
+            NetworkLocation.objects.filter(id=self.id).update(last_unavilable=now)
             return None
 
     @property
@@ -56,7 +69,7 @@ class NetworkLocation(models.Model):
         If this connection was checked recently, report that result,
         otherwise do a fresh check.
         """
-        expiration_time = timezone.now() - self.EXPIRATION_TIMEDELTA
+        expiration_time = timezone.now() - self.EXPIRATION_WINDOW
 
         available_recently = self.last_available > expiration_time
         unavailable_recently = self.last_unavailable > expiration_time
@@ -73,7 +86,7 @@ class NetworkLocation(models.Model):
             return True if self.ping() else False
 
 
-class StaticNetworkLocationManager(models.Manager):
+class StaticNetworkLocationManager(NetworkLocationManager):
     def get_queryset(self):
         queryset = super(StaticNetworkLocationManager, self).get_queryset()
         return queryset.filter(dynamic=False)
@@ -90,7 +103,7 @@ class StaticNetworkLocation(NetworkLocation):
         return super(StaticNetworkLocation, self).save(*args, **kwargs)
 
 
-class DynamicNetworkLocationManager(models.Manager):
+class DynamicNetworkLocationManager(NetworkLocationManager):
     def get_queryset(self):
         queryset = super(DynamicNetworkLocationManager, self).get_queryset()
         return queryset.filter(dynamic=True)
@@ -102,7 +115,7 @@ class DynamicNetworkLocationManager(models.Manager):
         info = ping(base_url)
         if info:
             instance_id = info.get("instance_id")
-            info.update(last_available=timezone.now())
+            info.update(last_available=timezone.now(), base_url=base_url)
             location, created = self.update_or_create(info, id=instance_id)
             return location
 

@@ -40,7 +40,7 @@
             v-model="selectedAddressId"
             class="radio-button"
             :value="a.id"
-            :label="a.device_name"
+            :label="a.nickname"
             :description="a.base_url"
             :disabled="!a.available || !a.hasContent"
           />
