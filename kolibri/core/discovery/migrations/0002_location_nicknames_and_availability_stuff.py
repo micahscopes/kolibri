@@ -6,6 +6,7 @@ import datetime
 
 from django.db import migrations
 from django.db import models
+from django.utils.timezone import utc
 
 
 class Migration(migrations.Migration):
@@ -18,12 +19,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="networklocation",
             name="last_available",
-            field=models.DateTimeField(default=datetime.datetime(1000, 4, 1, 0, 0)),
+            field=models.DateTimeField(default=datetime.datetime(1000, 4, 1, 0, 0, tzinfo=utc)),
         ),
         migrations.AddField(
             model_name="networklocation",
             name="last_unavailable",
-            field=models.DateTimeField(default=datetime.datetime(1000, 4, 1, 0, 0)),
+            field=models.DateTimeField(default=datetime.datetime(1000, 4, 1, 0, 0, tzinfo=utc)),
         ),
         migrations.AddField(
             model_name="networklocation",

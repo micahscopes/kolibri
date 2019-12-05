@@ -15,7 +15,7 @@ class NetworkLocation(models.Model):
 
     EXPIRATION_WINDOW = timedelta(seconds=10)
     DEFAULT_PING_TIMEOUT_SECONDS = 5
-    NEVER = datetime(1000, 4, 1, 0, 0, 0, 0)
+    NEVER = datetime(1000, 4, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
 
     base_url = models.CharField(max_length=100)
     nickname = models.CharField(max_length=100, blank=True)
